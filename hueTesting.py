@@ -117,7 +117,7 @@ def main():
         with open(CRED_FILE_PATH, "r") as cred_file:
             lines = cred_file.readlines()
             username = lines[0]
-            BRIDGE_IP = lines[0]
+            BRIDGE_IP = lines[1]
 
     # create the bridge resource, passing the captured username
     bridge = Bridge(BRIDGE_IP, username)
