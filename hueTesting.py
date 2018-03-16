@@ -97,7 +97,7 @@ def main():
         regex = re.compile(IP_REG, flags=re.IGNORECASE)
         BRIDGE_IP = input('> ')
 
-        while not regex.match(my_input):
+        while not regex.match(BRIDGE_IP):
             print('You did not enter a valid IP adress, please try again')
             BRIDGE_IP = input('> ')
 
@@ -110,21 +110,41 @@ def main():
 
         # store the username in a credential file
         with open(CRED_FILE_PATH, "w") as cred_file:
-            cred_file.write(username)
+            cred_file.write(username+'\n')
             cred_file.write(BRIDGE_IP)
 
     else:
         with open(CRED_FILE_PATH, "r") as cred_file:
-            lines = cred_file.readlines()
+            lines = cred_file.read().split('\n')
             username = lines[0]
-            BRIDGE_IP = lines[0]
+            BRIDGE_IP = lines[1]
 
     # create the bridge resource, passing the captured username
     bridge = Bridge(BRIDGE_IP, username)
 
     # create a lights resource
-    lights = bridge.lights
+    light = bridge.lights
 
+    #rainbow(lights[2])
+    #peterLAmpoule(lights[2])
+    #traficLight(lights[2])
+    #rainbow(lights[2])
+    #traficLight2(light[1], light[2])
+    #peterLAmpoule(light)
+    rainbow(light)
+    #light[1].state(bri=0, hue=RED, transitiontime=0)
+    #light[2].state(bri=0, hue=RED, transitiontime=0)
+
+def peterLAmpoule(light):
+    br = 0
+    lastSec = time()
+    while True:
+        currT = time()
+        if currT - lastSec > 0.01:
+            lastSec = currT
+            br += 1
+            light[1].state(bri=(br % 2)*254, hue=RED, transitiontime=0)
+            light[2].state(bri=(br % 2)*254, hue=RED, transitiontime=0)
 
 
 def SecSwitchAndFadeIn(light):
@@ -161,20 +181,33 @@ def traficLight(light, defBri = 254):
     lastSec = time()
     while True:
         currT = time()
+        if currT - lastSec > 0.25:
+            lastSec = currT
+            light.state(bri=defBri, hue=COLORS[hu%2], transitiontime=0)
+            hu += 1
+
+
+def traficLight2(light1, light2, defBri = 254):
+    hu = 0
+    lastSec = time()
+    while True:
+        currT = time()
         if currT - lastSec > 0.75:
             lastSec = currT
-            light.state(bri=defBri, hue=COLORS[hu%2])
+            light1.state(bri=defBri, hue=COLORS[hu%2], transitiontime=0)
+            light2.state(bri=defBri, hue=COLORS[(hu+1)%2], transitiontime=0)
             hu += 1
+
 
 def rainbow(light, defBri = 254):
     hu = 0
     lastSec = time()
     while True:
         currT = time()
-        if currT - lastSec > 1:
+        if currT - lastSec > 1.2:
             lastSec = currT
-            print(hu)
-            light.state(bri=defBri, hue=hu%65535)
+            light[2].state(bri=defBri, hue=hu%65535, sat=SAT_MAX, transitiontime=100)
+            light[1].state(bri=defBri, hue=hu%65535, sat=SAT_MAX, transitiontime=100)
             hu += 2**12
             if hu >65000:
                 hu = 0
