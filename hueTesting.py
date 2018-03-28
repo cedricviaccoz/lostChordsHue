@@ -60,32 +60,15 @@ class LightController:
         self.light.state(sat = sa)
         self.sa = sa
 
+    #decayTime in seconds
     def fadeOut(self, decayTime):
-        #TODO : rewrite using transitiontime
-        br0 = self.br
-        decByHalfSec = br0 / (decayTime * 2)
-        t0 = time()
-        while br0 > 0:
-            currT = time()
-            if t0 - currT > 0.5:
-                br0 -= decByHalfSec
-                self.setBrightness(br0)
-                t0 = currT
-  
+        self.light.state(bri = 0, transitiontime = int(decayTime*1000))
+        self.br = 0
+    
+    #decayTime in seconds
     def fadeIn(self, decayTime, toBri = 128):
-        #TODO : rewrite using transitiontime
-        br0 = self.br
-        if br0 > 10 or br0 < 0:
-            return
-        else :
-            decByHalfSec = (toBri - br0) / (decayTime * 2)
-            t0 = time()
-            while br0 < toBri:
-                currT = time()
-                if t0 - currT > 0.5:
-                    br0 += decByHalfSec
-                    self.setBrightness(br0)
-                    t0 = currT
+        self.light.state(bri = toBri, transitiontime = int(decayTime*1000))
+        self.br = toBri
 
 
 def main():
@@ -129,7 +112,7 @@ def main():
     #peterLAmpoule(lights[2])
     #traficLight(lights[2])
     #rainbow(lights[2])
-    #traficLight2(light[1], light[2])
+    #christmasTime(light[1], light[2])
     #peterLAmpoule(light)
     rainbow(light)
     #light[1].state(bri=0, hue=RED, transitiontime=0)
@@ -187,7 +170,7 @@ def traficLight(light, defBri = 254):
             hu += 1
 
 
-def traficLight2(light1, light2, defBri = 254):
+def christmasTime(light1, light2, defBri = 254):
     hu = 0
     lastSec = time()
     while True:
