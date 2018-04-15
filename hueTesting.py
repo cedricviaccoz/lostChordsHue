@@ -2,7 +2,8 @@
 
 from os import path
 from qhue import Bridge, QhueException, create_new_username
-from time import time
+import time
+import random
 import re
 
 # the path for the username credentials file
@@ -34,42 +35,33 @@ IP_REG += QUART_REG
 
 COLORS = [RED, GREEN, BLUE]
 
-class LightController:
+phase1 = [
+    ["001", 0.25],
+    ["010", 0.5],
+    ["011", 0.6],
+    ["100", 0.85],
+    ["101", 0.9],
+    ["110", 1] 
+]
 
-    def __init__(self, lightBinding, br = BRI_MAX/2, hu = RED, sa = SAT_MAX/2):
-        self.br = br
-        self.hu = hu
-        self.sa = sa
-        self.light = lightBinding
+phase2 = [
+    ["001", 0.15],
+    ["010", 0.3],
+    ["011", 0.5],
+    ["100", 0.65],
+    ["101", 0.8],
+    ["110", 1] 
+]
 
-    def setBHS(self, br=BRI_MAX/2, sa=SAT_MAX/2, hu = RED):
-        self.light.state(bri = br, hue = hu, sat=sa)
-        self.hu = hu
-        self.br = br
-        self.sa = sa
-
-    def setBrightness(self, br):
-        self.light.state(bri = br)
-        self.br = br
-
-    def setHue(self, hu):
-        self.light.state(hue = hu)
-        self.hu = hu
-
-    def setSat(self, sa):
-        self.light.state(sat = sa)
-        self.sa = sa
-
-    #decayTime in seconds
-    def fadeOut(self, decayTime):
-        self.light.state(bri = 0, transitiontime = int(decayTime*1000))
-        self.br = 0
-    
-    #decayTime in seconds
-    def fadeIn(self, decayTime, toBri = 128):
-        self.light.state(bri = toBri, transitiontime = int(decayTime*1000))
-        self.br = toBri
-
+phase3 = [
+    ["001", 0.05],
+    ["010", 0.1],
+    ["011", 0.3],
+    ["100", 0.35],
+    ["101", 0.55],
+    ["110", 0.75],
+    ["111", 1] 
+]
 
 def main():
 
@@ -107,16 +99,86 @@ def main():
 
     # create a lights resource
     light = bridge.lights
+    scheduler(light)
+    #SecSwitchAndFadeIn(light[1])
 
-    #rainbow(lights[2])
-    #peterLAmpoule(lights[2])
-    #traficLight(lights[2])
-    #rainbow(lights[2])
-    #christmasTime(light[1], light[2])
-    #peterLAmpoule(light)
-    rainbow(light)
-    #light[1].state(bri=0, hue=RED, transitiontime=0)
-    #light[2].state(bri=0, hue=RED, transitiontime=0)
+def getPhase(ti):
+    if ti > 480:
+        return phase3
+    elif ti > 240:
+        return phase2
+    else:
+        return phase1
+
+def extractNextComb(phase):
+    prevProb = 0
+    sel = random.random()
+    for row in phase:
+        currProb = row[1]
+        if sel > prevProb and sel <= currProb:
+            m = map(lambda c : True if c == '0' else False, list(row[0]))
+            lhlh = []
+            for l in m:
+                lhlh.append(l)
+            return lhlh
+        prevProb = currProb
+
+def switchLights(currComb, lights):
+    ind = 0
+    while(ind < 3):
+        if currComb[ind]:
+            lights[ind].state(bri = 200)
+        ind += 1
+    t0 = time.clock()
+    t1 = time.clock()
+    while(t0 - t1 < 4):
+        t1 = time.clock()
+    ind = 0
+    while(ind<3):
+        if not currComb[ind]:
+            lights[ind].state(bri = 0)
+        ind += 1
+
+
+def switchLights2(currComb, lights):
+    if currComb[0]:
+        lights[1].state(bri = 250)
+    if currComb[1] and currComb[2]:
+        lights[2].state(bri = 250, hue = PURPLE)
+    elif currComb[1]:
+        lights[2].state(bri = 250, hue = BLUE)
+    elif currComb[2]:
+        lights[2].state(bri = 250, hue = RED)
+    else:
+        lights[2].state(bri = 0)
+    if not currComb[0]:
+        lights[1].state(bri=0)
+
+def scheduler(lights):
+        #fadein/fadeout of 4 seconds
+    lights[1].state(bri = 0, hue = GREEN, transitiontime = 80, sat = SAT_MAX)
+    lights[2].state(bri = 0, hue = BLUE, transitiontime = 80, sat = SAT_MAX)
+    #lights[2].state(bri = 0, hue = RED,  transitiontime = int(4000))
+    t0 = time.time()
+    tPrevious = t0
+    tCurr = t0
+    while(tCurr - t0 < 700.0): #720 seconds is 12 minutes
+        phase = getPhase(t0-tCurr)
+        if tCurr - tPrevious> 20.0:
+            tPrevious = tCurr
+            currComb = extractNextComb(phase)
+            for p in currComb:
+                print(p)
+            switchLights2(currComb, lights)
+        tCurr = time.time()
+
+    lights[1].state(bri = 250, hue=GREEN)
+    lights[2].state(bri = 250, hue=PURPLE)
+    while(t0 - tCurr < 740):
+        tCurr = time.time()
+    lights[1].state(bri = 0, hue=GREEN)
+    lights[2].state(bri = 0, hue=PURPLE)
+
 
 def peterLAmpoule(light):
     br = 0
@@ -133,7 +195,7 @@ def peterLAmpoule(light):
 def SecSwitchAndFadeIn(light):
     i = 50
     hu = 0
-    lastSec = time()
+    lastSec = time.time()
     while True:
         if i > 254:
             i = 50
@@ -141,7 +203,7 @@ def SecSwitchAndFadeIn(light):
         if hu > 65535:
             hu = 0
 
-        currT = time()
+        currT = time.time()
         if currT - lastSec > 1:
             lastSec = currT
             hu += 1
